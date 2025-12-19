@@ -1,0 +1,5 @@
+discord.py
+discord
+stoat.py
+python-dotenv
+requests
