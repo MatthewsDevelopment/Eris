@@ -15,6 +15,7 @@ intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 client = commands.Bot(command_prefix=commands.when_mentioned, intents=intents)
 client.remove_command("help")
+WAIFUIMAPIURL = os.getenv("WAIFUIMBASEURL")
 STATUSAPIURL = "https://status.waifu.im/api/status-page/waifu"
 HEARTBEATURL = f"{STATUSAPIURL.replace('/api/status-page/', '/api/status-page/heartbeat/')}"
 
@@ -77,7 +78,7 @@ async def nsfwtoggle_error(ctx, error):
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def waifu(ctx, tagsearch):
     if ctx.channel.is_nsfw():
-        url = 'https://api.waifu.im/search'
+        url = f"{WAIFUIMAPIURL}/search"
         waifu_params = {'included_tags': [f'{tagsearch}']}
         waifu_response = requests.get(url, params=waifu_params)
         if waifu_response.status_code == 200:
@@ -98,7 +99,7 @@ async def waifu(ctx, tagsearch):
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def waifutags(ctx):
     if ctx.channel.is_nsfw():
-        request=requests.get("https://api.waifu.im/tags").json()
+        request=requests.get(f"{WAIFUIMAPIURL}/tags").json()
         embed = discord.Embed(title="Waifu Command", description="Here are the tags available for: waifu <tagsearch>", color=(65480))
         embed.add_field(name="Versatile Tags", value=f"{request['versatile']}", inline=False)
         embed.add_field(name="NSFW Tags", value=f"{request['nsfw']}", inline=False)
@@ -110,7 +111,7 @@ async def waifutags(ctx):
 @waifu.error
 async def waifu_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
-        request=requests.get("https://api.waifu.im/tags").json()
+        request=requests.get(f"{WAIFUIMAPIURL}/tags").json()
         embed = discord.Embed(title="Waifu Command", description=f"Here are the tags available for: waifu <tagsearch>", color=(65480))
         embed.add_field(name="Versatile Tags", value=f"{request['versatile']}", inline=False)
         embed.add_field(name="NSFW Tags", value=f"{request['nsfw']}", inline=False)
@@ -302,7 +303,7 @@ async def _nsfwtoggle_error(interaction, error):
 @app_commands.checks.cooldown(1, 10)
 async def _waifu(interaction: discord.Interaction, tagsearch:str):
     if interaction.channel.is_nsfw():
-        url = 'https://api.waifu.im/search'
+        url = f"{WAIFUIMAPIURL}/search"
         waifu_params = {'included_tags': [f'{tagsearch}']}
         waifu_response = requests.get(url, params=waifu_params)
         if waifu_response.status_code == 200:
@@ -324,7 +325,7 @@ async def _waifu(interaction: discord.Interaction, tagsearch:str):
 @app_commands.checks.cooldown(1, 10)
 async def _waifutags(interaction: discord.Interaction):
     if interaction.channel.is_nsfw():
-        request=requests.get("https://api.waifu.im/tags").json()
+        request=requests.get(f"{WAIFUIMAPIURL}/tags").json()
         embed = discord.Embed(title="Waifu Command", description="Here are the tags available for: /waifu <tagsearch>", color=(65480))
         embed.add_field(name="Versatile Tags", value=f"{request['versatile']}", inline=False)
         embed.add_field(name="NSFW Tags", value=f"{request['nsfw']}", inline=False)
@@ -418,7 +419,7 @@ async def _waifustatus(interaction: discord.Interaction):
     discord.app_commands.Choice(name="Waifu-SFW", value=1),
     discord.app_commands.Choice(name="Waifu-NSFW", value=2),
 ])
-async def _status(interaction: discord.Interaction, option: discord.app_commands.Choice[int]):
+async def _waifupics(interaction: discord.Interaction, option: discord.app_commands.Choice[int]):
     if option.name == "Waifu-SFW":
         api_url = f"https://api.waifu.pics/sfw/waifu"
         waifupics_image = None
@@ -487,7 +488,7 @@ async def favsget(ctx):
     if ctx.author.id not in matthewdevstaff:
         return await ctx.send("Only Matthews Development Staff members can use this command")
 
-    url = 'https://api.waifu.im/fav'
+    url = f"{WAIFUIMAPIURL}/fav"
     headers = {
         'Accept-Version': 'v5',
         'Authorization': f'Bearer {WAIFUIMTOKEN}',
@@ -517,7 +518,7 @@ async def favtoggle(ctx, imageid: int):
     if ctx.author.id not in matthewdevstaff:
         return await ctx.send("Only Matthews Development Staff members can use this command")
 
-    url = 'https://api.waifu.im/fav/toggle'
+    url = f"{WAIFUIMAPIURL}/fav/toggle"
     headers = {
         'Accept-Version': 'v5',
         'Authorization': f'Bearer {WAIFUIMTOKEN}',
@@ -540,7 +541,7 @@ async def favtoggle(ctx, imageid: int):
 @client.tree.command(name="favsget", description="Get your favorite waifus (Bot staff only)")
 async def _favsget(interaction: discord.Interaction):
     if interaction.user.id in matthewdevstaff:
-        url = 'https://api.waifu.im/fav'
+        url = f"{WAIFUIMAPIURL}/fav"
         headers = {
             'Accept-Version': 'v5',
             'Authorization': f'Bearer {WAIFUIMTOKEN}',
@@ -574,7 +575,7 @@ async def _favsget(interaction: discord.Interaction):
 @app_commands.checks.cooldown(1, 10)
 async def _favtoggle(interaction: discord.Interaction, imageid:int):
     if interaction.user.id in matthewdevstaff:
-        url = 'https://api.waifu.im/fav/toggle'
+        url = f"{WAIFUIMAPIURL}/fav/toggle"
         headers = {
             'Accept-Version': 'v5',
             'Authorization': f'Bearer {WAIFUIMTOKEN}',

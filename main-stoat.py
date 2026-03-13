@@ -15,6 +15,7 @@ WEBSOCKETURL=os.getenv("STOATWEBSOCKETURL")
 WAIFUIMTOKEN = os.getenv("WAIFUIMTOKEN")
 client = commands.Bot(command_prefix=BOTPREFIX, http_base=BASEURL, websocket_base=WEBSOCKETURL)
 client.remove_command("help")
+WAIFUIMAPIURL = os.getenv("WAIFUIMBASEURL")
 STATUSAPIURL = "https://status.waifu.im/api/status-page/waifu"
 HEARTBEATURL = f"{STATUSAPIURL.replace('/api/status-page/', '/api/status-page/heartbeat/')}"
 
@@ -31,7 +32,7 @@ async def help(ctx):
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def waifu(ctx, tagsearch):
     if ctx.channel.nsfw:
-        url = 'https://api.waifu.im/search'
+        url = f"{WAIFUIMAPIURL}/search"
         waifu_params = {'included_tags': [f'{tagsearch}']}
         waifu_response = requests.get(url, params=waifu_params)
         if waifu_response.status_code == 200:
@@ -50,7 +51,7 @@ async def waifu(ctx, tagsearch):
 @commands.cooldown(1, 5, commands.BucketType.user)
 async def waifutags(ctx):
     if ctx.channel.nsfw:
-        request=requests.get("https://api.waifu.im/tags").json()
+        request=requests.get(f"{WAIFUIMAPIURL}/tags").json()
         embed = stoat.SendableEmbed(title="Waifu Command", description=f"Here are the tags available for: waifu <tagsearch>\nVersatile Tags: {request['versatile']}\nNSFW Tags: {request['nsfw']}")
         await ctx.channel.send(embeds=[embed])
     else:
@@ -185,7 +186,7 @@ async def waifupicsnsfw(ctx):
 @client.command()
 @commands.is_owner()
 async def favsget(ctx):
-    url = 'https://api.waifu.im/fav'
+    url = f"{WAIFUIMAPIURL}/fav"
     headers = {
         'Accept-Version': 'v5',
         'Authorization': f'Bearer {WAIFUIMTOKEN}',
@@ -211,7 +212,7 @@ async def favsget(ctx):
 @client.command()
 @commands.is_owner()
 async def favtoggle(ctx, imageid: int):
-    url = 'https://api.waifu.im/fav/toggle'
+    url = f"{WAIFUIMAPIURL}/fav/toggle"
     headers = {
         'Accept-Version': 'v5',
         'Authorization': f'Bearer {WAIFUIMTOKEN}',
