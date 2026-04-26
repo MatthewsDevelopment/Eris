@@ -1,9 +1,6 @@
 # eris
 
 > [!NOTE]
-> To use the waifu.im API commands, you will need your own waifu.im v6 instance until I get v7 of the API to work. You can still use the waifu.pics API commands.
-
-> [!NOTE]
 > The Fluxer bot is currently very unfinished and still needs a lot of work. Currently a placeholder for now.
 
 eris is a Discord, Stoat, and Fluxer bot that allows you to get waifu images in your server for free. It uses a couple waifu image APIs to get the waifu images to provide a variety of waifu images. This source code also includes commands to manage your waifu.im account waifu favorites.

@@ -19,14 +19,32 @@ WAIFUIMAPIURL = os.getenv("WAIFUIMBASEURL")
 STATUSAPIURL = "https://status.waifu.im/api/status-page/waifu"
 HEARTBEATURL = f"{STATUSAPIURL.replace('/api/status-page/', '/api/status-page/heartbeat/')}"
 
+@client.on(commands.CommandErrorEvent)
+async def on_command_error(event):
+    ctx = event.context
+    error = event.error
+    await ctx.send(f"Something went wrong. {error}")
+
 
 
 
 
 @client.command()
 async def help(ctx):
-    embed = stoat.SendableEmbed(title=f"{client.user.name}", description=f"{BOTPREFIX}help - This message\n{BOTPREFIX}waifu - Send a waifu image based on a tag search\n{BOTPREFIX}waifutags - Get all tag available for the waifu command\n{BOTPREFIX}waifustatus - Checks the current status of the waifu image APIs\n{BOTPREFIX}waifupicssfw - Send a waifu image from waifu.pics\n{BOTPREFIX}waifupicsnsfw - Send a NSFW waifu image from waifu.pics\n{BOTPREFIX}favsget\n{BOTPREFIX}favtoggle")
-    await ctx.send(embeds=[embed])
+    embed = stoat.SendableEmbed(title=f"{client.user.name}", description=f"{BOTPREFIX}help - This message\n{BOTPREFIX}waifu - Send a waifu image based on a tag search\n{BOTPREFIX}waifutags - Get all tag available for the waifu command\nwaifuimageinfo\n{BOTPREFIX}waifustatus - Checks the current status of the waifu image APIs\n{BOTPREFIX}waifupicssfw - Send a waifu image from waifu.pics\n{BOTPREFIX}waifupicsnsfw - Send a NSFW waifu image from waifu.pics\n{BOTPREFIX}favsget\n{BOTPREFIX}favtoggle")
+    await ctx.channel.send(embeds=[embed])
+
+@client.command()
+@commands.server_only()
+async def say(ctx, *, message:str):
+    if not ctx.server.permissions_for(ctx.author).manage_server:
+        embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description="You need to have the **MANAGE SERVER** permission to use this command.")
+        await ctx.channel.send(embeds=[embed])
+        return
+    if "@everyone" in message.lower():
+        await ctx.channel.send("You can not have the bot mention everyone")
+        return
+    await ctx.channel.send(message)
 
 @client.command()
 @commands.cooldown(1, 5, commands.BucketType.user)
@@ -41,10 +59,10 @@ async def waifu(ctx, tagsearch):
             embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description="No image was found with the provided tag search")
             await ctx.channel.send(embeds=[embed])
 
-        embed = stoat.SendableEmbed(title=f"Waifu image - Tag: {tagsearch}\nAPI source: https://www.waifu.im | Requested by {ctx.author.name}")
+        embed = stoat.SendableEmbed(title=f"Waifu image - Tag: {tagsearch}", description=f"API source: https://www.waifu.im | Requested by {ctx.author.name}")
         await ctx.channel.send(content=f"{waifu_image}", embeds=[embed])
     else:
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reason")
+        embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reason")
         await ctx.channel.send(embeds=[embed])
 
 @client.command()
@@ -55,7 +73,27 @@ async def waifutags(ctx):
         embed = stoat.SendableEmbed(title="Waifu Command", description=f"Here are the tags available for: waifu <tagsearch>\nVersatile Tags: {request['versatile']}\nNSFW Tags: {request['nsfw']}")
         await ctx.channel.send(embeds=[embed])
     else:
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reason")
+        embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reason")
+        await ctx.channel.send(embeds=[embed])
+
+@client.command()
+@commands.cooldown(1, 5, commands.BucketType.user)
+async def waifuimageinfo(ctx, imageid: int):
+    if ctx.channel.nsfw:
+        headers = {'Accept-Version': 'v7'}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{WAIFUIMAPIURL}/images/{imageid}", headers=headers) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+    
+                    if not data:
+                        embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description=f"API source: https://www.waifu.im | Requested by {ctx.author.name}")
+                        await ctx.channel.send(embeds=[embed])
+
+                    embed = stoat.SendableEmbed(title=f"Image ID: {imageid}", description=f"Source: {data['source']}\nAPI source: https://www.waifu.im | Requested by {ctx.author.name}")
+                    await ctx.channel.send(content=f"{data['url']}", embeds=[embed])
+    else:
+        embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons")
         await ctx.channel.send(embeds=[embed])
 
 @client.command()
@@ -136,7 +174,7 @@ async def waifupicssfw(ctx):
                     waifupics_image = data.get("url")
                 else:
                     embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description="Received status code {response.status} from the API for category `{category}`.")
-                    await ctx.send(embed=embed)
+                    await ctx.channel.send(embed=embed)
                     return
         except aiohttp.ClientConnectorError:
             embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description="Failed to connect to the waifu.pics API. Please try again later.")
@@ -186,28 +224,40 @@ async def waifupicsnsfw(ctx):
 @client.command()
 @commands.is_owner()
 async def favsget(ctx):
-    url = f"{WAIFUIMAPIURL}/fav"
-    headers = {
-        'Accept-Version': 'v5',
-        'Authorization': f'Bearer {WAIFUIMTOKEN}',
-    }
+    if ctx.channel.nsfw:
+        url = f"{WAIFUIMAPIURL}/users/me/albums/favorites/images?IsNsfw=All"
+        headers = {
+            'Accept': 'application/json',
+            'Accept-Version': 'v7',
+            'Authorization': f'Bearer {WAIFUIMTOKEN}',
+            'X-Api-Key': f'{WAIFUIMTOKEN}'
+        }
+        params = {
+            "included_tags": "true",
+            "page_size": 10
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, params=params) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers) as response:
-            if response.status == 200:
-                data = await response.json()
-                favs = data.get('images', [])
-                if not favs:
-                    return await ctx.channel.send("Sorry, your favorites list is empty")
+                    if not data or 'items' not in data:
+                        return await ctx.channel.send("Sorry, your favorites list is empty or album does not exist")
 
-                desc = ""
-                for img in favs[:10]:
-                    desc += f"**ID:** {img['image_id']} | [Link]({img['url']})\n"
-                embed = stoat.SendableEmbed(title="waifu.im Favorites", description=desc)
-                await ctx.channel.send(content=f"Showing {len(favs[:10])} of {len(favs)} favorites", embeds=[embed])
-            else:
-                embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description=f"{response.status}")
-                await ctx.channel.send(embeds=[embed])
+                    images = data['items'][:10] 
+                    embed = stoat.SendableEmbed(title=f"Album Favorites - Showing {len(images)})")
+    
+                    links = []
+                    for img in images:
+                        links.append(f"**ID:** {img['id']} | [Link]({img['url']})")
+                    embed.description = "\n".join(links)
+                    await ctx.channel.send(embeds=[embed])
+                else:
+                    embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description=f"{response.status}")
+                    await ctx.channel.send(embeds=[embed])
+    else:
+        embed = stoat.SendableEmbed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons")
+        await ctx.channel.send(embeds=[embed])
 
 @client.command()
 @commands.is_owner()

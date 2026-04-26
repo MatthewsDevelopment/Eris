@@ -16,6 +16,7 @@ client = discord.Client(intents=intents)
 client = commands.Bot(command_prefix=commands.when_mentioned, intents=intents)
 client.remove_command("help")
 WAIFUIMAPIURL = os.getenv("WAIFUIMBASEURL")
+WAIFUIMTOKEN = os.getenv("WAIFUIMTOKEN")
 STATUSAPIURL = "https://status.waifu.im/api/status-page/waifu"
 HEARTBEATURL = f"{STATUSAPIURL.replace('/api/status-page/', '/api/status-page/heartbeat/')}"
 
@@ -63,13 +64,30 @@ async def nsfwtoggle(ctx, value=""):
 @nsfwtoggle.error
 async def nsfwtoggle_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="You need to have **MANAGE_CHANNELS** permission to use this command.", color=(16711680))
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="You need to have the **MANAGE_CHANNELS** permission to use this command.", color=(16711680))
         await ctx.send(embed=embed)
     if isinstance(error, commands.BotMissingPermissions):
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="I need to have **MANAGE_CHANNELS** permission to use this command.", color=(16711680))
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="I need to have the **MANAGE_CHANNELS** permission to use this command.", color=(16711680))
         await ctx.send(embed=embed)
     if isinstance(error, commands.MissingRequiredArgument):  
         embed = discord.Embed(title="ARGUMENTS REQUIRED", description="nsfwtoggle <true/false>", color=(16711680))
+        await ctx.send(embed=embed)
+    else:
+        raise error
+
+@client.command()
+@commands.has_permissions(manage_messages=True)
+async def say(ctx, *, question: commands.clean_content):
+    await ctx.send(f'{question}')
+    await ctx.message.delete()
+
+@say.error
+async def say_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        embed = discord.Embed(title="ARGUMENTS REQUIRED", description="What do you want me to say?", color=(16711680))
+        await ctx.send(embed=embed)
+    if isinstance(error, commands.MissingPermissions):
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="You need to have the **MANAGE_MESSAGES** permission to use this command.", color=(16711680))
         await ctx.send(embed=embed)
     else:
         raise error
@@ -92,7 +110,29 @@ async def waifu(ctx, tagsearch):
         embed.set_footer(text=f"API source: https://www.waifu.im | Requested by {ctx.author.name}")
         await ctx.send(embed=embed)
     else:
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reason", color=(16711680))
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons", color=(16711680))
+        await ctx.send(embed=embed)
+
+@client.command()
+async def waifuimageinfo(ctx, imageid: int):
+    if ctx.channel.is_nsfw():
+        headers = {'Accept-Version': 'v7'}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{WAIFUIMAPIURL}/images/{imageid}", headers=headers) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+    
+                    if not data:
+                        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="{imageid} could not be found", color=(16711680))
+                        await ctx.send(embed=embed)
+
+                    embed = discord.Embed(title=f"Image ID: {imageid}", color=discord.Color.random())
+                    embed.set_image(url=data['url'])
+                    embed.add_field(name="Source", value=data['source'])
+                    embed.set_footer(text=f"API source: https://www.waifu.im | Requested by {ctx.author.name}")
+                    await ctx.send(embed=embed)
+    else:
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons", color=(16711680))
         await ctx.send(embed=embed)
 
 @client.command()
@@ -105,7 +145,7 @@ async def waifutags(ctx):
         embed.add_field(name="NSFW Tags", value=f"{request['nsfw']}", inline=False)
         await ctx.send(embed=embed)
     else:
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reason", color=(16711680))
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons", color=(16711680))
         await ctx.send(embed=embed)
 
 @waifu.error
@@ -227,7 +267,7 @@ async def waifupicssfw(ctx):
 @client.command()
 async def waifupicsnsfw(ctx):
     if not ctx.channel.is_nsfw():
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reason", color=(16711680))
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons", color=(16711680))
         await ctx.send(embed=embed)
         return
     api_url = f"https://api.waifu.pics/nsfw/waifu"
@@ -289,10 +329,10 @@ async def _nsfwtoggle(interaction: discord.Interaction, value: discord.app_comma
 @_nsfwtoggle.error
 async def _nsfwtoggle_error(interaction, error):
     if isinstance(error, app_commands.MissingPermissions):
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="You need to have **MANAGE_CHANNELS** permission to use this command.", color=(16711680))
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="You need to have the **MANAGE_CHANNELS** permission to use this command.", color=(16711680))
         await interaction.response.send_message(embed=embed, ephemeral=True)
     if isinstance(error, app_commands.BotMissingPermissions):
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="I need to have **MANAGE_CHANNELS** permission to use this command.", color=(16711680))
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="I need to have the **MANAGE_CHANNELS** permission to use this command.", color=(16711680))
         await interaction.response.send_message(embed=embed, ephemeral=True)
     else:
         raise error
@@ -316,8 +356,35 @@ async def _waifu(interaction: discord.Interaction, tagsearch:str):
         embed.set_footer(text=f"API source: https://www.waifu.im | Requested by {interaction.user.name}")
         await interaction.response.send_message(embed=embed)
     else:
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reason", color=(16711680))
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons", color=(16711680))
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+
+@discord.app_commands.allowed_installs(guilds=True, users=True)
+@discord.app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@client.tree.command(name="waifuimageinfo", description='Get information on a waifu image on waifu.im')
+@app_commands.checks.cooldown(1, 10)
+async def _waifuimageinfo(interaction: discord.Interaction, imageid:int):
+    if interaction.channel.is_nsfw():
+        headers = {'Accept-Version': 'v7'}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{WAIFUIMAPIURL}/images/{imageid}", headers=headers) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+    
+                    if not data:
+                        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="{imageid} could not be found", color=(16711680))
+                        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+                    embed = discord.Embed(title=f"Image ID: {imageid}", color=discord.Color.random())
+                    embed.set_image(url=data['url'])
+                    embed.add_field(name="Source", value=data['source'])
+                    embed.set_footer(text=f"API source: https://www.waifu.im | Requested by {interaction.user.name}")
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+    else:
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons", color=(16711680))
+        await interaction.response.send_message(embed=embed)
 
 @discord.app_commands.allowed_installs(guilds=True, users=True)
 @discord.app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -331,7 +398,7 @@ async def _waifutags(interaction: discord.Interaction):
         embed.add_field(name="NSFW Tags", value=f"{request['nsfw']}", inline=False)
         await interaction.response.send_message(embed=embed)
     else:
-        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reason", color=(16711680))
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons", color=(16711680))
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 @_waifu.error
@@ -446,7 +513,7 @@ async def _waifupics(interaction: discord.Interaction, option: discord.app_comma
             await interaction.response.send_message(f"Sorry, I couldn't find a valid image URL.", ephemeral=True)
     if option.name == "Waifu-NSFW":
         if not interaction.channel.is_nsfw():
-            embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reason", color=(16711680))
+            embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons", color=(16711680))
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         api_url = f"https://api.waifu.pics/nsfw/waifu"
@@ -487,31 +554,40 @@ WAIFUIMTOKEN = os.getenv("WAIFUIMTOKEN")
 async def favsget(ctx):
     if ctx.author.id not in matthewdevstaff:
         return await ctx.send("Only Matthews Development Staff members can use this command")
+    if ctx.channel.is_nsfw():
+        url = f"{WAIFUIMAPIURL}/users/me/albums/favorites/images?IsNsfw=All"
+        headers = {
+            'Accept': 'application/json',
+            'Accept-Version': 'v7',
+            'Authorization': f'Bearer {WAIFUIMTOKEN}',
+            'X-Api-Key': f'{WAIFUIMTOKEN}'
+        }
+        params = {
+            "included_tags": "true",
+            "page_size": 10
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, params=params) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
 
-    url = f"{WAIFUIMAPIURL}/fav"
-    headers = {
-        'Accept-Version': 'v5',
-        'Authorization': f'Bearer {WAIFUIMTOKEN}',
-    }
+                    if not data or 'items' not in data:
+                        return await ctx.send("Sorry, your favorites list is empty or album does not exist")
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers) as response:
-            if response.status == 200:
-                data = await response.json()
-                favs = data.get('images', [])
-                if not favs:
-                    return await ctx.send("Sorry, your favorites list is empty")
-
-                embed = discord.Embed(title="waifu.im Favorites", color=(65480))
-                description = ""
-                for img in favs[:10]:
-                    description += f"**ID:** {img['image_id']} | [Link]({img['url']})\n"
-                embed.description = description
-                embed.set_footer(text=f"Showing {len(favs[:10])} of {len(favs)} favorites")
-                await ctx.send(embed=embed)
-            else:
-                embed = discord.Embed(title="AN ERROR HAS OCCURED", description=f"{response.status}", color=(16711680))
-                await ctx.send(embed=embed)
+                    images = data['items'][:10] 
+                    embed = discord.Embed(title=f"Album Favorites - Showing {len(images)})")
+    
+                    links = []
+                    for img in images:
+                        links.append(f"**ID:** {img['id']} | [Link]({img['url']})")
+                    embed.description = "\n".join(links)
+                    await ctx.send(embed=embed)
+                else:
+                    embed = discord.Embed(title="AN ERROR HAS OCCURED", description=f"{response.status}", color=(16711680))
+                    await ctx.send(embed=embed)
+    else:
+        embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons", color=(16711680))
+        await ctx.send(embed=embed)
 
 @client.command()
 async def favtoggle(ctx, imageid: int):
@@ -541,30 +617,40 @@ async def favtoggle(ctx, imageid: int):
 @client.tree.command(name="favsget", description="Get your favorite waifus (Bot staff only)")
 async def _favsget(interaction: discord.Interaction):
     if interaction.user.id in matthewdevstaff:
-        url = f"{WAIFUIMAPIURL}/fav"
-        headers = {
-            'Accept-Version': 'v5',
-            'Authorization': f'Bearer {WAIFUIMTOKEN}',
-        }
+        if interaction.channel.is_nsfw():
+            url = f"{WAIFUIMAPIURL}/users/me/albums/favorites/images?IsNsfw=All"
+            headers = {
+                'Accept': 'application/json',
+                'Accept-Version': 'v7',
+                'Authorization': f'Bearer {WAIFUIMTOKEN}',
+                'X-Api-Key': f'{WAIFUIMTOKEN}'
+            }
+            params = {
+                "included_tags": "true",
+                "page_size": 10
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers, params=params) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    favs = data.get('images', [])
-                    if not favs:
-                        return await ctx.send("Sorry, your favorites list is empty")
+                        if not data or 'items' not in data:
+                            return await interaction.response.send_message("Sorry, your favorites list is empty or album does not exist", ephemeral=True)
 
-                    embed = discord.Embed(title="waifu.im Favorites", color=(65480))
-                    description = ""
-                    for img in favs[:10]:
-                        description += f"**ID:** {img['image_id']} | [Link]({img['url']})\n"
-                    embed.description = description
-                    embed.set_footer(text=f"Showing {len(favs[:10])} of {len(favs)} favorites")
-                    await interaction.response.send_message(embed=embed)
-                else:
-                    embed = discord.Embed(title="AN ERROR HAS OCCURED", description=f"{response.status}", color=(16711680))
-                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                        images = data['items'][:10] 
+                        embed = discord.Embed(title=f"Album Favorites - Showing {len(images)})")
+    
+                        links = []
+                        for img in images:
+                            links.append(f"**ID:** {img['id']} | [Link]({img['url']})")
+                        embed.description = "\n".join(links)
+                        await interaction.response.send_message(embed=embed)
+                    else:
+                        embed = discord.Embed(title="AN ERROR HAS OCCURED", description=f"{resp.status}", color=(16711680))
+                        await interaction.response.send_message(embed=embed, ephemeral=True)
+        else:
+            embed = discord.Embed(title="AN ERROR HAS OCCURED", description="This command can only be used in Age-restricted marked channes for safety reasons", color=(16711680))
+            await interaction.response.send_message(embed=embed, ephemeral=True)
     else:
         await interaction.response.send_message("Only Matthews Development Staff members can use this command", ephemeral=True)
         return
